@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Gampong</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div><h1>Data Gampong</h1><small>Data Penduduk • Excel sebagai database</small></div>
+  <div class="headActions">
+    <button id="reloadExcel" class="reloadBtn" type="button">🔄 Muat Ulang Data</button>
+    <label class="pick">📂 Pilih Excel <input id="file" type="file" accept=".xlsx,.xls"></label>
+  </div>
+</header>
+
+<main>
+<div class="info" id="info">Pilih file <b>DATA-GAMPONG.xlsx</b>. Data diproses langsung di browser.</div>
+
+<!-- 1. STATISTIK -->
+<section id="stats" class="stats"></section>
+
+<!-- 2. DATA PENDUDUK -->
+<section class="panel" id="dataPanel">
+  <div class="sectionTitle">
+    <h2>DATA PENDUDUK</h2>
+    <span id="total"></span>
+  </div>
+  <div class="search">
+    <input id="q" placeholder="🔎 Cari NIK, No. KK, nama, ayah, ibu, pekerjaan...">
+    <button id="reset">Reset</button>
+    <button id="csv">⬇ Excel</button>
+    <button id="print">🖨 Cetak</button>
+  </div>
+  <div id="filters" class="filters"></div>
+  <div id="reportFilterBar" class="reportFilterBar"></div>
+  <div class="table"><table id="data"></table></div>
+</section>
+
+<!-- 3. REKAP KELOMPOK UMUR -->
+<section class="panel report">
+  <div class="sectionTitle">
+    <h2>REKAP TABEL KELOMPOK UMUR</h2>
+    <span>Klik <b>Lihat Data</b> untuk melihat siapa saja yang masuk kategori</span>
+  </div>
+  <div class="table"><table id="ageReport"></table></div>
+</section>
+
+<!-- 4. REKAP DUSUN DAN PEKERJAAN -->
+<section class="two">
+  <section class="panel">
+    <div class="sectionTitle"><h2>Rekap Dusun/Lorong</h2><span>Klik kategori untuk melihat warga</span></div>
+    <div class="table"><table id="dusun"></table></div>
+  </section>
+  <section class="panel">
+    <div class="sectionTitle"><h2>Rekap Pekerjaan</h2><span>Klik kategori untuk melihat warga</span></div>
+    <div class="table"><table id="job"></table></div>
+  </section>
+</section>
+
+<!-- 5. PALING BAWAH: PENDIDIKAN -->
+<section class="panel report">
+  <div class="sectionTitle">
+    <h2>TABEL DATA KEPENDUDUKAN BERDASARKAN PENDIDIKAN</h2>
+    <span id="eduTotal"></span>
+  </div>
+  <div class="table"><table id="eduReport"></table></div>
+</section>
+
+<!-- 6. PALING BAWAH: KEPALA KELUARGA PER DUSUN -->
+<section class="panel report">
+  <div class="sectionTitle"><h2>DAFTAR KEPALA KELUARGA PER DUSUN</h2><span id="kkTotal"></span></div>
+  <div id="kkReport"></div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
