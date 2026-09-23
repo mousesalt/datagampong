@@ -53,3 +53,134 @@ th{position:sticky;top:0;background:#edf2ef;z-index:1}
   .kkGroup{break-inside:avoid}
   .signature{min-width:150px;height:42px}
 }
+
+/* =========================================================
+   DATA GAMPONG — MOBILE TABLE FIX ONLY
+   Tidak mengubah struktur/logic JavaScript.
+   Tambahkan blok ini PALING BAWAH style.css
+   ========================================================= */
+
+@media (max-width: 800px) {
+
+  /* Jangan biarkan tabel rekap melebar keluar layar */
+  .report .table,
+  #dusun + .table,
+  #job + .table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Tabel rekap dibuat benar-benar mengikuti lebar layar */
+  .report table,
+  #dusun,
+  #job {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    white-space: normal !important;
+  }
+
+  /* Sel lebih rapat */
+  .report table th,
+  .report table td,
+  #dusun th,
+  #dusun td,
+  #job th,
+  #job td {
+    padding: 7px 4px !important;
+    font-size: 10.5px !important;
+    line-height: 1.25;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* Kolom angka */
+  .report table th:nth-child(2),
+  .report table td:nth-child(2),
+  .report table th:nth-child(3),
+  .report table td:nth-child(3),
+  .report table th:nth-child(4),
+  .report table td:nth-child(4),
+  .report table th:nth-child(5),
+  .report table td:nth-child(5) {
+    text-align: center;
+  }
+
+  /* Kolom nama/kategori */
+  #ageReport th:first-child,
+  #ageReport td:first-child {
+    width: 36%;
+  }
+
+  #dusun th:first-child,
+  #dusun td:first-child {
+    width: 25%;
+  }
+
+  #job th:first-child,
+  #job td:first-child {
+    width: 31%;
+  }
+
+  #eduReport th:first-child,
+  #eduReport td:first-child {
+    width: 30%;
+  }
+
+  /* Tombol Lihat Data tidak lagi memaksa tabel melebar */
+  .viewBtn {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 6px 3px !important;
+    font-size: 9.5px !important;
+    line-height: 1.15;
+    white-space: normal !important;
+    word-break: keep-all;
+  }
+
+  /* Header tabel lebih kecil */
+  .report table th,
+  #dusun th,
+  #job th {
+    font-size: 9.5px !important;
+    letter-spacing: -.15px;
+  }
+
+  /* Judul panel tidak membuat halaman melebar */
+  .sectionTitle {
+    flex-wrap: wrap;
+  }
+
+  .sectionTitle h2 {
+    font-size: 14px;
+  }
+
+  .sectionTitle span {
+    font-size: 10px;
+  }
+
+  /* Tabel data utama tetap boleh horizontal scroll,
+     karena kolomnya memang banyak. */
+  #dataPanel .table {
+    overflow-x: auto !important;
+  }
+
+  #dataPanel #data {
+    min-width: 1050px;
+    table-layout: auto;
+    white-space: nowrap !important;
+  }
+
+  /* Daftar KK */
+  #kkReport .table {
+    overflow-x: auto !important;
+  }
+
+  #kkReport table {
+    min-width: 650px;
+    table-layout: auto;
+    white-space: nowrap !important;
+  }
+}
