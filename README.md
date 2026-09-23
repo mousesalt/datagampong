@@ -1,5 +1,7 @@
 # DATA GAMPONG
 
+<img width="1200" height="600" alt="social-preview" src="https://github.com/user-attachments/assets/6ee3a82e-cfe9-4815-a0f2-fea98d0bcaeb" />
+
 Sistem web Data Gampong berbasis **HTML + CSS + JavaScript** dengan Excel
 sebagai sumber data/raw database.
 
