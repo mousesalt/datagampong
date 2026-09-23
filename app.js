@@ -85,7 +85,7 @@ function buildFilters(){
     `<select id="umur">
       <option value="">Semua Umur</option>
       <option value="lansia">Lansia ≥60</option>
-      <option value="dewasa">Dewasa 17–64</option>
+      <option value="dewasa">Dewasa 17–59</option>
       <option value="remaja">Remaja 10–16</option>
       <option value="anak">Anak &lt;10</option>
     </select>`
@@ -188,7 +188,7 @@ function renderRecaps(){
 
 function renderAgeReport(){
   const ages=[
-    ['LANSIA (>=60)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=65;}],
+    ['LANSIA (>=60)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=60;}],
     ['DEWASA (>=17)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=17;}],
     ['REMAJA (>=10)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=10;}],
     ['ANAK-ANAK (0–<17)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=0&&a<17;}],
