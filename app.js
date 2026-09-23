@@ -84,7 +84,7 @@ function buildFilters(){
     makeSelect('pekerjaan','Semua Pekerjaan','pekerjaan'),
     `<select id="umur">
       <option value="">Semua Umur</option>
-      <option value="lansia">Lansia ≥65</option>
+      <option value="lansia">Lansia ≥60</option>
       <option value="dewasa">Dewasa 17–64</option>
       <option value="remaja">Remaja 10–16</option>
       <option value="anak">Anak &lt;10</option>
@@ -105,8 +105,8 @@ function match(r){
 
   const age=num(val(r,'umur')), u=$('umur').value;
   if(age===null && u) return false;
-  if(u==='lansia' && age<65) return false;
-  if(u==='dewasa' && (age<17 || age>=65)) return false;
+  if(u==='lansia' && age<60) return false;
+  if(u==='dewasa' && (age<17 || age>=60)) return false;
   if(u==='remaja' && (age<10 || age>=17)) return false;
   if(u==='anak' && age>=10) return false;
   return true;
@@ -188,7 +188,7 @@ function renderRecaps(){
 
 function renderAgeReport(){
   const ages=[
-    ['LANSIA (>=65)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=65;}],
+    ['LANSIA (>=60)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=65;}],
     ['DEWASA (>=17)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=17;}],
     ['REMAJA (>=10)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=10;}],
     ['ANAK-ANAK (0–<17)',r=>{const a=num(val(r,'umur'));return a!==null&&a>=0&&a<17;}],
