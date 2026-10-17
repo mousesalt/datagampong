@@ -219,42 +219,17 @@
       return;
     }
 
-    const names = allDusunNames();
+    // Ekspor hanya daftar kepala keluarga. Setiap dusun menjadi satu sheet;
+    // jangan sertakan seluruh database penduduk, master, atau rekap tambahan.
+    const names = allDusunNames().filter(name => headsForDusun(name).length > 0);
+    if (!names.length) {
+      alert('Belum ada kepala keluarga dengan nama dusun yang terisi.');
+      return;
+    }
+
     const workbook = XLSX.utils.book_new();
-
-    // Database sumber tetap ikut agar file ekspor dapat diunggah kembali ke aplikasi.
-    const rawSheet = XLSX.utils.json_to_sheet(rows.map(row => ({ ...row })));
-    rawSheet['!cols'] = Object.keys(rows[0] || {}).map(() => ({ wch: 20 }));
-    appendUniqueSheet(workbook, 'DATAPENDUDUK', rawSheet);
-
-    // Master dusun hanya berisi dusun yang ditemukan pada baris penduduk aktif.
-    const masterSheet = XLSX.utils.aoa_to_sheet([['DUSUN'], ...names.map(name => [name])]);
-    masterSheet['!cols'] = [{ wch: 32 }];
-    appendUniqueSheet(workbook, 'MASTER_DUSUN', masterSheet);
-
-    const recaps = [['REKAP JUMLAH KEPALA KELUARGA PER DUSUN'], [], ['DUSUN / LORONG', 'JUMLAH KK'], ...names.map(name => [name, headsForDusun(name).length])];
-    const recapSheet = XLSX.utils.aoa_to_sheet(recaps);
-    recapSheet['!cols'] = [{ wch: 34 }, { wch: 18 }];
-    appendUniqueSheet(workbook, 'REKAP KK', recapSheet);
-
-    const allHeads = [];
-    names.forEach(name => {
-      headsForDusun(name).forEach(row => allHeads.push({ name, row }));
-    });
-    const combinedData = [
-      ['DAFTAR KEPALA KELUARGA - SEMUA DUSUN'],
-      [],
-      ['NO', 'DUSUN / LORONG', 'NAMA', 'JENIS KELAMIN', 'PEKERJAAN', 'TANDA TANGAN'],
-      ...allHeads.map((item, index) => [index + 1, item.name, clean(val(item.row, 'nama')), clean(val(item.row, 'jk')), clean(val(item.row, 'pekerjaan')), ''])
-    ];
-    const combinedSheet = XLSX.utils.aoa_to_sheet(combinedData);
-    combinedSheet['!cols'] = [{ wch: 7 }, { wch: 28 }, { wch: 32 }, { wch: 18 }, { wch: 30 }, { wch: 32 }];
-    appendUniqueSheet(workbook, 'SEMUA DUSUN', combinedSheet);
-
-    // Tiap dusun yang memiliki data menjadi satu sheet tersendiri.
     names.forEach(name => appendUniqueSheet(workbook, name, makeDusunSheet(name)));
-
-    XLSX.writeFile(workbook, 'Data-Gampong-Ekspor-Semua-Dusun.xlsx');
+    XLSX.writeFile(workbook, 'Daftar-Kepala-Keluarga-Semua-Dusun.xlsx');
   }
 
   function addControlPanel() {
@@ -267,7 +242,7 @@
       <div class="kkExtraButtons">
         <button type="button" id="exportAllDusun" class="excelBtn">📥 Export Semua Dusun</button>
       </div>
-      <p class="kkExtraHelp">Daftar ini hanya menampilkan dusun yang memiliki kepala keluarga pada sheet DATAPENDUDUK. Nama dusun dibaca dari kolom LORONG/DUSUN/NAMA LORONG/NAMA DUSUN. Untuk menambahkan dusun, isi nama dusun pada baris penduduk di Excel, lalu muat ulang file. Ekspor menghasilkan rekap, daftar gabungan, dan satu sheet per dusun yang memiliki data.</p>
+      <p class="kkExtraHelp">Daftar ini hanya menampilkan dusun yang memiliki kepala keluarga pada sheet DATAPENDUDUK. Nama dusun dibaca dari kolom LORONG/DUSUN/NAMA LORONG/NAMA DUSUN. Untuk menambahkan dusun, isi nama dusun pada baris penduduk di Excel, lalu muat ulang file. Export Semua Dusun membuat satu file Excel dengan satu sheet untuk setiap dusun yang memiliki kepala keluarga. Hanya daftar kepala keluarga yang diekspor; data penduduk lengkap tidak disertakan.</p>
     `;
     report.parentElement.insertBefore(wrapper, report);
     document.getElementById('exportAllDusun').addEventListener('click', exportAllDusun);
@@ -331,6 +306,17 @@
     activate(saved, false);
   }
 
+
+  // Semua tombol "Lihat Data" dari rekap harus membuka tab Data Penduduk lebih dulu.
+  // Wrapper ini mempertahankan filter/predicate asli dari tiap jenis rekap.
+  const originalApplyReportFilter = applyReportFilter;
+  applyReportFilter = function (label, predicate) {
+    const dataTab = document.querySelector('[data-tab="data"]');
+    if (dataTab) dataTab.click();
+    originalApplyReportFilter(label, predicate);
+    const dataPanel = document.getElementById('dataPanel');
+    if (dataPanel) dataPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   function setupRecapTabs() {
     const tabs = Array.from(document.querySelectorAll('[data-recap-tab]'));
@@ -625,17 +611,20 @@
         <div class="city">${identityEscape(data.kabupaten_kota)}</div>
         <div class="dg-id-banner">PRATINJAU DATA PENDUDUK • BUKAN DOKUMEN RESMI</div>
       </div>`;
-    const body = [
+    const leftBody = [
       identityCardRow('NIK', data.nik, 'dg-id-nik'),
       identityCardRow('Nama', data.nama),
       identityCardRow('Tempat/Tgl Lahir', `${data.tmpt_lhr} / ${data.tgl_lhr}`),
       `<div class="dg-id-grid">${identityCardRow('Jenis Kelamin', data.jk)}${identityCardRow('Gol. Darah', data.gdr)}</div>`,
-      identityCardRow('Alamat', data.alamat),
+      identityCardRow('Alamat', data.alamat)
+    ].join('');
+    const rightBody = [
       `<div class="dg-id-grid">${identityCardRow('RT/RW', '-/-')}${identityCardRow('Kel/Desa', data.kel_desa)}</div>`,
       `<div class="dg-id-grid">${identityCardRow('Kecamatan', data.kecamatan)}${identityCardRow('Agama', data.agama)}</div>`,
-      `<div class="dg-id-grid">${identityCardRow('Status Perkawinan', data.status_perkawinan)}${identityCardRow('Pekerjaan', data.pekerjaan)}</div>`,
-      `<div class="dg-id-grid">${identityCardRow('Kewarganegaraan', data.kewarganegaraan)}${identityCardRow('Berlaku Hingga', data.berlaku_hingga)}</div>`
+      `<div class="dg-id-grid">${identityCardRow('Status', data.status_perkawinan)}${identityCardRow('Pekerjaan', data.pekerjaan)}</div>`,
+      `<div class="dg-id-grid">${identityCardRow('Warga Negara', data.kewarganegaraan)}${identityCardRow('Berlaku Hingga', data.berlaku_hingga)}</div>`
     ].join('');
+    const body = `<div class="dg-id-column dg-id-column-left">${leftBody}</div><div class="dg-id-column dg-id-column-right">${rightBody}</div>`;
     const card = `
       <div class="dg-identity-card" aria-label="Pratinjau kartu identitas penduduk tanpa foto">
         <div class="dg-id-watermark">PRATINJAU • BUKAN DOKUMEN RESMI</div>
