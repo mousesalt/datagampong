@@ -60,6 +60,99 @@
       body.dg-print-identity #dgIdentityCardResult{position:absolute;left:0;top:0;width:100%;margin:0}
       body.dg-print-identity .dg-identity-card{max-width:none;width:100%;box-shadow:none;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     }
+
+    /* UI refinement: compact dashboard, grouped reports and portrait card preview. */
+    main{width:calc(100% - 28px)!important;max-width:1800px!important;margin-inline:auto}
+    .dg-tab-nav{position:sticky;top:8px;gap:10px;padding:10px;margin:16px 0;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-color:#d6e4ed;box-shadow:0 5px 18px #0f172a0a;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}
+    .dg-tab-btn{white-space:nowrap;min-height:48px;padding:12px 18px;font-size:15px;flex:0 0 auto;border-radius:12px;transition:transform .15s,box-shadow .15s,background .15s}
+    .dg-tab-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px #0f172a12}
+    .dg-tab-btn[aria-selected="true"]{background:linear-gradient(135deg,#176b50,#155e75);border-color:#176b50}
+    .dg-tab-panel{min-width:0}
+    .dg-overview-panel{height:auto!important;min-height:0!important;padding:22px!important;overflow:visible}
+    .dg-overview-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+    .dg-eyebrow{margin:0 0 6px;color:#137255;font-size:11px;letter-spacing:.14em;font-weight:900}
+    .dg-overview-heading h2{margin:0 0 6px;font-size:clamp(22px,2vw,30px);line-height:1.2;color:#102a43}
+    .dg-live-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #b7e4d1;background:#effcf5;color:#146c43;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:800;white-space:nowrap}
+    .dg-live-pill i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a}
+    .dg-quick-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+    .dg-quick-actions button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;min-height:66px;padding:14px;border:1px solid #dbe6ee;border-radius:13px;background:#fff;color:#16324f;font:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s}
+    .dg-quick-actions button span{font-size:20px;color:#167451}
+    .dg-quick-actions button:hover{transform:translateY(-2px);border-color:#71bda1;box-shadow:0 8px 20px #14532d12;background:#fafffc}
+    .dg-overview-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+    .dg-overview-metric{padding:16px;border:1px solid #dce7ee;border-radius:14px;background:linear-gradient(135deg,#fff,#f7fbf9);display:flex;flex-direction:column;gap:5px;min-width:0}
+    .dg-overview-metric span{font-size:13px;color:#52677a;font-weight:700}
+    .dg-overview-metric strong{font-size:30px;line-height:1.1;color:#155e48;font-variant-numeric:tabular-nums}
+    .dg-overview-metric small{font-size:11px;line-height:1.45;color:#718096}
+    .dg-overview-bottom{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:14px;margin-top:12px}
+    .dg-overview-subpanel{border:1px solid #e0e8ef;border-radius:14px;padding:16px;background:#fff;min-width:0}
+    .dg-subheading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+    .dg-subheading h3{margin:0;color:#18334d;font-size:16px}
+    .dg-subheading span{font-size:11px;color:#748397;text-align:right}
+    .dg-overview-bars{display:grid;gap:12px}
+    .dg-bar-row{display:grid;grid-template-columns:minmax(80px,150px) minmax(30px,1fr) 42px;gap:10px;align-items:center}
+    .dg-bar-name{font-size:12px;font-weight:700;overflow-wrap:anywhere;color:#344b60}
+    .dg-bar-track{height:11px;background:#eef4f2;border-radius:999px;overflow:hidden}
+    .dg-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1a8b65,#4b9eb2);min-width:0;transition:width .25s}
+    .dg-bar-value{text-align:right;font-size:12px;font-weight:800;color:#18334d;font-variant-numeric:tabular-nums}
+    .dg-completeness{display:grid;gap:13px}
+    .dg-completeness-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+    .dg-completeness-row span{font-size:12px;color:#52677a}
+    .dg-completeness-row strong{font-size:12px;color:#18334d}
+    .dg-completeness-track{grid-column:1/-1;height:7px;border-radius:999px;background:#eef2f7;overflow:hidden}
+    .dg-completeness-track i{display:block;height:100%;border-radius:999px;background:#21936f}
+    .dg-empty-state{padding:18px;border:1px dashed #cad8e3;border-radius:10px;color:#6a7d91;font-size:13px;text-align:center}
+    .dg-recap-shell{min-height:0!important;height:auto!important;padding:20px!important}
+    .dg-recap-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px;padding:7px;border-radius:12px;background:#f1f6f9;border:1px solid #dbe6ee}
+    .dg-recap-tabs button{padding:10px 15px;border-radius:9px;border:1px solid transparent;background:transparent;color:#3c5166;font:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+    .dg-recap-tabs button:hover{background:#fff;border-color:#c9d9e5}
+    .dg-recap-tabs button[aria-selected="true"]{background:#166c50;color:#fff;box-shadow:0 3px 8px #166c5025}
+    .dg-recap-view[hidden]{display:none!important}
+    .dg-recap-view{padding:6px 0 4px;animation:dgFadeIn .16s ease-out}
+    .dg-recap-view .sectionTitle h3{margin:0;font-size:19px;color:#19334a}
+    .dg-recap-view .table{width:100%;overflow:auto;border:1px solid #e1e8ed;border-radius:11px}
+    .dg-recap-view table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0}
+    .dg-recap-view th{background:#edf5f1;color:#183b32;position:sticky;top:0;z-index:1}
+    .dg-recap-view td,.dg-recap-view th{padding:12px 14px}
+    .dg-identity-form{background:#f8fbff;border-color:#d8e5ef}
+    .dg-identity-fields{gap:14px}
+    .dg-identity-field label{font-size:13px}
+    .dg-identity-field input,.dg-identity-field select{padding:12px;border-radius:10px}
+    #dgIdentityCardResult{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;margin:22px auto 4px}
+    .dg-identity-card{width:min(100%,350px)!important;max-width:350px!important;min-height:0;aspect-ratio:3/4.25;padding:16px 17px 14px;border-radius:14px;box-shadow:0 12px 28px #0f355018;background:linear-gradient(155deg,#e4f5fb 0%,#c2e3ef 48%,#f2fafc 100%)}
+    .dg-identity-top{margin-bottom:12px}
+    .dg-identity-top .province{font-size:15px;line-height:1.25}
+    .dg-identity-top .city{font-size:13px;margin-top:4px}
+    .dg-id-banner{font-size:7px;letter-spacing:.06em;line-height:1.3;margin-top:7px}
+    .dg-identity-main{gap:7px}
+    .dg-id-row{grid-template-columns:96px 7px minmax(0,1fr);gap:4px;font-size:10px;line-height:1.35;overflow-wrap:anywhere}
+    .dg-id-row .key{font-weight:800}
+    .dg-id-row .value{font-weight:700;letter-spacing:0}
+    .dg-id-nik .value{font-size:12px;letter-spacing:.035em;overflow-wrap:anywhere}
+    .dg-id-grid{grid-template-columns:minmax(0,1fr);gap:7px}
+    .dg-identity-footer{display:block;margin-top:11px;font-size:8px;line-height:1.45;text-align:center}
+    .dg-identity-footer span,.dg-identity-footer span:last-child{display:block;text-align:center}
+    #dgIdentityCardResult .dg-identity-actions{justify-content:center;width:100%}
+    #kkReport .kkGroup{border:1px solid #dde8e4;border-radius:13px;padding:12px;margin:0 0 14px;background:#fff;break-inside:avoid}
+    #kkReport .kkTitle{padding:4px 2px 10px;border-bottom:1px solid #e5ece9;margin-bottom:10px}
+    #kkReport .kkTitle h3{font-size:20px;color:#165d47}
+    #kkReport .kkTitle h3 small{font-size:13px}
+    #kkReport .table{width:100%;overflow:auto}
+    #kkReport table{width:100%;min-width:650px;border-collapse:collapse}
+    #kkReport th,#kkReport td{padding:11px 13px}
+    #kkReport th{background:#edf5f1;color:#183b32}
+    #kkExtraActions{padding:14px;border:1px solid #dbe8e1;background:#f8fcf9;border-radius:13px}
+    #kkExtraActions .kkExtraHelp{font-size:13px;max-width:1000px}
+    @media(max-width:900px){.dg-quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.dg-overview-bottom{grid-template-columns:1fr}}
+    @media(max-width:620px){main{width:calc(100% - 18px)!important}.dg-tab-nav{position:static}.dg-tab-btn{font-size:13px;padding:10px 12px;min-height:42px}.dg-overview-panel,.dg-recap-shell{padding:14px!important}.dg-overview-heading{display:block}.dg-live-pill{margin-top:5px}.dg-quick-actions{grid-template-columns:1fr}.dg-quick-actions button{min-height:54px}.dg-overview-metrics{grid-template-columns:1fr}.dg-bar-row{grid-template-columns:minmax(76px,100px) minmax(20px,1fr) 32px;gap:7px}.dg-recap-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.dg-recap-tabs button{padding:10px 7px;font-size:12px}.dg-identity-fields{grid-template-columns:1fr}.dg-identity-card{width:min(100%,330px)!important;max-width:330px!important}.dg-id-row{grid-template-columns:92px 7px minmax(0,1fr)}}
+    @media print{
+      @page{size:A4 portrait;margin:12mm}
+      body.dg-print-identity *{visibility:hidden!important}
+      body.dg-print-identity #dgIdentityCardResult,body.dg-print-identity #dgIdentityCardResult *{visibility:visible!important}
+      body.dg-print-identity #dgIdentityCardResult{position:absolute;left:50%;top:12mm;transform:translateX(-50%);width:88mm;margin:0;display:block}
+      body.dg-print-identity .dg-identity-card{width:82mm!important;max-width:82mm!important;height:116mm;aspect-ratio:auto;box-shadow:none;margin:0 auto;padding:5mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body.dg-print-identity #dgIdentityCardResult .dg-identity-actions{display:none!important}
+    }
+
   </style>
 </head>
 <body>
@@ -78,17 +171,44 @@
       <button type="button" class="dg-tab-btn" role="tab" id="tab-overview" aria-controls="pane-overview" data-tab="overview" aria-selected="true">📊 Ringkasan</button>
       <button type="button" class="dg-tab-btn" role="tab" id="tab-data" aria-controls="pane-data" data-tab="data" aria-selected="false">👥 Data Penduduk</button>
       <button type="button" class="dg-tab-btn" role="tab" id="tab-identity" aria-controls="pane-identity" data-tab="identity" aria-selected="false">🪪 Kartu Identitas</button>
-      <button type="button" class="dg-tab-btn" role="tab" id="tab-age" aria-controls="pane-age" data-tab="age" aria-selected="false">🎂 Rekap Umur</button>
-      <button type="button" class="dg-tab-btn" role="tab" id="tab-dusun" aria-controls="pane-dusun" data-tab="dusun" aria-selected="false">🏘️ Dusun & Pekerjaan</button>
-      <button type="button" class="dg-tab-btn" role="tab" id="tab-education" aria-controls="pane-education" data-tab="education" aria-selected="false">🎓 Pendidikan</button>
+      <button type="button" class="dg-tab-btn" role="tab" id="tab-recap" aria-controls="pane-recap" data-tab="recap" aria-selected="false">📈 Rekap Data</button>
       <button type="button" class="dg-tab-btn" role="tab" id="tab-heads" aria-controls="pane-heads" data-tab="heads" aria-selected="false">📋 Kepala Keluarga</button>
     </nav>
 
     <section class="dg-tab-panel" id="pane-overview" role="tabpanel" aria-labelledby="tab-overview" data-pane="overview">
       <section id="stats" class="stats"></section>
-      <div class="panel"><h2>Ringkasan Aplikasi</h2><p class="dg-tab-intro">Pilih tab di atas untuk membuka fitur yang dibutuhkan. Data Excel diproses di browser ini.</p></div>
+      <section class="panel dg-overview-panel">
+        <div class="dg-overview-heading">
+          <div>
+            <p class="dg-eyebrow">DASHBOARD ADMINISTRASI</p>
+            <h2>Ringkasan Data Gampong</h2>
+            <p class="dg-tab-intro">Statistik diperbarui mengikuti file Excel yang sedang dimuat. Pilih tindakan cepat untuk membuka fitur yang diperlukan.</p>
+          </div>
+          <span class="dg-live-pill"><i></i> Data lokal</span>
+        </div>
+        <div class="dg-quick-actions">
+          <button type="button" data-go-tab="data">👥 Buka Data Penduduk <span>→</span></button>
+          <button type="button" data-go-tab="identity">🪪 Cari Kartu Identitas <span>→</span></button>
+          <button type="button" data-go-tab="recap">📈 Buka Rekap Data <span>→</span></button>
+          <button type="button" data-go-tab="heads">📋 Daftar Kepala Keluarga <span>→</span></button>
+        </div>
+        <div class="dg-overview-metrics" id="dgOverviewMetrics">
+          <article class="dg-overview-metric"><span>Dusun dengan data</span><strong id="dgOverviewDusunCount">—</strong><small>Terbaca dari DATAPENDUDUK</small></article>
+          <article class="dg-overview-metric"><span>Penduduk dengan pendidikan</span><strong id="dgOverviewEducationCount">—</strong><small>Kolom pendidikan terisi</small></article>
+          <article class="dg-overview-metric"><span>Kepala keluarga terdata</span><strong id="dgOverviewHeadCount">—</strong><small>SHDK teridentifikasi sebagai kepala keluarga</small></article>
+        </div>
+        <div class="dg-overview-bottom">
+          <section class="dg-overview-subpanel">
+            <div class="dg-subheading"><h3>Penduduk per dusun</h3><span>5 dusun dengan data terbanyak</span></div>
+            <div id="dgOverviewDusunBars" class="dg-overview-bars"><div class="dg-empty-state">Muat file Excel untuk menampilkan ringkasan.</div></div>
+          </section>
+          <section class="dg-overview-subpanel">
+            <div class="dg-subheading"><h3>Kelengkapan ringkas</h3><span>Data aktif</span></div>
+            <div id="dgOverviewCompleteness" class="dg-completeness"></div>
+          </section>
+        </div>
+      </section>
     </section>
-
     <section class="dg-tab-panel" id="pane-data" role="tabpanel" aria-labelledby="tab-data" data-pane="data" hidden>
       <section class="panel" id="dataPanel">
         <div class="sectionTitle"><h2>DATA PENDUDUK</h2><span id="total"></span></div>
@@ -129,30 +249,32 @@
       </section>
     </section>
 
-    <section class="dg-tab-panel" id="pane-age" role="tabpanel" aria-labelledby="tab-age" data-pane="age" hidden>
-      <section class="panel report">
-        <div class="sectionTitle"><h2>REKAP TABEL KELOMPOK UMUR</h2><span>Klik <b>Lihat Data</b> untuk melihat warga dalam kategori</span></div>
-        <div class="table"><table id="ageReport"></table></div>
-      </section>
-    </section>
-
-    <section class="dg-tab-panel" id="pane-dusun" role="tabpanel" aria-labelledby="tab-dusun" data-pane="dusun" hidden>
-      <section class="two">
-        <section class="panel">
-          <div class="sectionTitle"><h2>Rekap Dusun/Lorong</h2><span>Klik kategori untuk melihat warga</span></div>
+    <section class="dg-tab-panel" id="pane-recap" role="tabpanel" aria-labelledby="tab-recap" data-pane="recap" hidden>
+      <section class="panel dg-recap-shell">
+        <div class="sectionTitle"><h2>REKAPITULASI KEPENDUDUKAN</h2><span>Dusun · Pekerjaan · Pendidikan · Umur</span></div>
+        <p class="dg-tab-intro">Semua rekap berada di satu tempat. Pilih kategori di bawah, lalu gunakan tombol <b>Lihat Data</b> untuk memfilter daftar penduduk.</p>
+        <div class="dg-recap-tabs" role="tablist" aria-label="Kategori rekap">
+          <button type="button" role="tab" data-recap-tab="dusun" aria-selected="true">🏘️ Dusun</button>
+          <button type="button" role="tab" data-recap-tab="job" aria-selected="false">💼 Pekerjaan</button>
+          <button type="button" role="tab" data-recap-tab="education" aria-selected="false">🎓 Pendidikan</button>
+          <button type="button" role="tab" data-recap-tab="age" aria-selected="false">🎂 Kelompok Umur</button>
+        </div>
+        <section class="dg-recap-view" data-recap-view="dusun" role="tabpanel">
+          <div class="sectionTitle"><h3>Rekap Dusun/Lorong</h3><span>Hanya dusun yang memiliki data penduduk</span></div>
           <div class="table"><table id="dusun"></table></div>
         </section>
-        <section class="panel">
-          <div class="sectionTitle"><h2>Rekap Pekerjaan</h2><span>Klik kategori untuk melihat warga</span></div>
+        <section class="dg-recap-view" data-recap-view="job" role="tabpanel" hidden>
+          <div class="sectionTitle"><h3>Rekap Pekerjaan</h3><span>Klik kategori untuk melihat warga</span></div>
           <div class="table"><table id="job"></table></div>
         </section>
-      </section>
-    </section>
-
-    <section class="dg-tab-panel" id="pane-education" role="tabpanel" aria-labelledby="tab-education" data-pane="education" hidden>
-      <section class="panel report">
-        <div class="sectionTitle"><h2>TABEL DATA KEPENDUDUKAN BERDASARKAN PENDIDIKAN</h2><span id="eduTotal"></span></div>
-        <div class="table"><table id="eduReport"></table></div>
+        <section class="dg-recap-view" data-recap-view="education" role="tabpanel" hidden>
+          <div class="sectionTitle"><h3>Rekap Pendidikan</h3><span id="eduTotal"></span></div>
+          <div class="table"><table id="eduReport"></table></div>
+        </section>
+        <section class="dg-recap-view" data-recap-view="age" role="tabpanel" hidden>
+          <div class="sectionTitle"><h3>Rekap Kelompok Umur</h3><span>Klik kategori untuk melihat warga</span></div>
+          <div class="table"><table id="ageReport"></table></div>
+        </section>
       </section>
     </section>
 

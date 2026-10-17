@@ -12,9 +12,10 @@
   'use strict';
 
   const STORAGE_KEY = 'datagampong.masterDusun.v1';
+  // Bersihkan daftar lama yang sebelumnya tercampur nilai dari sheet selain DATAPENDUDUK.
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
 
-  // Kenali berbagai judul kolom Excel untuk nama dusun. Banyak file menggunakan
-  // NAMA DUSUN atau NAMA LORONG, bukan hanya DUSUN/LORONG.
+  // Kenali hanya judul kolom nama dusun yang memang digunakan pada sheet DATAPENDUDUK.
   function normalizeHeaderName(value) {
     return String(value == null ? '' : value)
       .toLocaleUpperCase('id-ID')
@@ -23,36 +24,37 @@
       .trim();
   }
 
+  const DUSUN_HEADERS = new Set([
+    'LORONG', 'DUSUN', 'NAMA LORONG', 'NAMA DUSUN',
+    'DUSUN LORONG', 'LORONG DUSUN', 'DUSUN NAMA', 'LORONG NAMA',
+    'DUSUN LORONG NAMA', 'LORONG DUSUN NAMA', 'NAMA DUSUN LORONG', 'NAMA LORONG DUSUN'
+  ]);
+
   function isDusunHeader(value) {
-    const header = normalizeHeaderName(value);
-    const exactHeaders = new Set([
-      'DUSUN', 'LORONG', 'NAMA DUSUN', 'NAMA LORONG',
-      'DUSUN LORONG', 'LORONG DUSUN', 'DUSUN NAMA', 'LORONG NAMA',
-      'NAMA DUSUN LORONG', 'NAMA LORONG DUSUN',
-      'DUSUN LORONG NAMA', 'LORONG DUSUN NAMA'
-    ]);
-    return exactHeaders.has(header) || /^NAMA (DUSUN|LORONG)( |$)/.test(header);
+    return DUSUN_HEADERS.has(normalizeHeaderName(value));
   }
 
-  // App utama memakai key()/val() untuk membaca isi Excel. Perluas pemetaan
-  // kolom agar alias nama dusun tetap terbaca oleh filter dan laporan lama.
   const originalColumnKey = key;
   key = function (header) {
     if (isDusunHeader(header)) return 'lorong';
     return originalColumnKey(header);
   };
 
-  // Bila Excel memiliki lebih dari satu kolom alias dusun, pakai nilai pertama
-  // yang benar-benar terisi agar kolom kosong tidak menutupi nama yang tersedia.
   const originalValueGetter = val;
   val = function (row, field) {
     if (field === 'lorong' && row && typeof row === 'object') {
-      const candidates = Object.keys(row).filter(header => key(header) === 'lorong');
-      for (const header of candidates) {
+      const priority = ['LORONG', 'DUSUN', 'NAMA LORONG', 'NAMA DUSUN', 'DUSUN LORONG', 'LORONG DUSUN'];
+      const headers = Object.keys(row).filter(header => isDusunHeader(header));
+      headers.sort((a, b) => {
+        const ai = priority.indexOf(normalizeHeaderName(a));
+        const bi = priority.indexOf(normalizeHeaderName(b));
+        return (ai < 0 ? 100 : ai) - (bi < 0 ? 100 : bi);
+      });
+      for (const header of headers) {
         const value = clean(row[header]);
         if (value) return row[header];
       }
-      if (candidates.length) return row[candidates[0]];
+      return '';
     }
     return originalValueGetter(row, field);
   };
@@ -65,93 +67,29 @@
     return normalizeDusunValue(left) === normalizeDusunValue(right);
   }
 
-  // Baca nama dusun dari semua sheet Excel, termasuk sheet terpisah seperti
-  // MASTER_DUSUN/DAFTAR DUSUN. Dengan demikian tidak wajib ditambahkan manual.
-  function collectDusunNamesFromWorkbook(workbook) {
-    const collected = [];
-    (workbook.SheetNames || []).forEach(sheetName => {
-      const sheet = workbook.Sheets[sheetName];
-      if (!sheet) return;
-      let matrix = [];
-      try { matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }); } catch (_) { return; }
-      // Cari baris judul kolom di seluruh sheet, bukan hanya baris pertama.
-      // Ini mendukung sheet daftar dusun dengan judul laporan di atasnya.
-      matrix.forEach((headerRow, headerIndex) => {
-        headerRow.forEach((headerCell, columnIndex) => {
-          if (!isDusunHeader(headerCell)) return;
-          for (let rowIndex = headerIndex + 1; rowIndex < matrix.length; rowIndex++) {
-            const raw = matrix[rowIndex] && matrix[rowIndex][columnIndex];
-            const value = String(raw == null ? '' : raw).trim();
-            if (!value || isDusunHeader(value)) continue;
-            collected.push(value);
-          }
-        });
-      });
-    });
-    return uniqueNames(collected);
-  }
-
-  function readSavedDusun() {
-    try {
-      const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      return Array.isArray(value) ? value.map(x => String(x || '').trim()).filter(Boolean) : [];
-    } catch (_) {
-      return [];
-    }
-  }
-
   function uniqueNames(list) {
     const result = new Map();
     list.forEach(value => {
-      const name = String(value == null ? '' : value).trim();
-      if (!name) return;
-      const normalized = name.toLocaleUpperCase('id-ID').replace(/\s+/g, ' ');
+      const name = String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+      // Nilai angka murni yang sempat masuk dari sheet rekap lama bukan nama dusun.
+      if (!name || /^\d+$/.test(name) || /^[-–—]+$/.test(name)) return;
+      const normalized = normalizeDusunValue(name);
       if (!result.has(normalized)) result.set(normalized, name);
     });
     return Array.from(result.values()).sort((a, b) => a.localeCompare(b, 'id'));
   }
 
-  function saveDusun(list) {
-    const names = uniqueNames(list);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(names));
-    } catch (error) {
-      alert('Nama dusun tidak dapat disimpan di browser ini. Periksa pengaturan penyimpanan browser.');
-    }
-    return names;
+  function isResidentRecord(row) {
+    // Baris yang hanya berisi nama dusun tanpa identitas warga bukan data penduduk.
+    return Boolean(clean(val(row, 'nama')) || clean(val(row, 'nik')) || clean(val(row, 'no_kk')));
   }
 
   function allDusunNames() {
-    // Nama dari data penduduk selalu dibaca langsung dari baris Excel aktif.
-    // MASTER_DUSUN menyertakan dusun yang memang belum memiliki warga.
-    const fromRows = rows.map(row => clean(val(row, 'lorong')));
-    return uniqueNames([...fromRows, ...readSavedDusun()]);
+    // Nama dusun bersumber HANYA dari baris penduduk yang benar-benar berisi identitas.
+    return uniqueNames(rows.filter(isResidentRecord).map(row => clean(val(row, 'lorong'))));
   }
 
-  // Baca daftar dusun dari workbook yang dipilih sebelum impor data utama.
-  const originalLoadExcelFile = loadExcelFile;
-  loadExcelFile = function (file) {
-    if (!file) return originalLoadExcelFile(file);
-
-    const reader = new FileReader();
-    reader.onload = function () {
-      try {
-        const workbook = XLSX.read(new Uint8Array(reader.result), { type: 'array' });
-        // Ganti daftar tersimpan dengan daftar yang benar-benar ditemukan pada
-        // Excel yang baru dipilih. Ini menghindari dusun lama yang tidak ada lagi
-        // di file tetap muncul sebagai dusun palsu berisi 0 KK.
-        const names = collectDusunNamesFromWorkbook(workbook);
-        saveDusun(names);
-      } catch (error) {
-        console.warn('Sheet MASTER_DUSUN tidak dapat dibaca; melanjutkan impor biasa.', error);
-      }
-      originalLoadExcelFile(file);
-    };
-    reader.onerror = function () { originalLoadExcelFile(file); };
-    reader.readAsArrayBuffer(file);
-  };
-
-  // Perluas pilihan filter dusun agar nama dusun kosong yang baru ditambahkan juga terlihat.
+  // Filter dusun mengikuti nama yang benar-benar muncul pada data penduduk.
   const originalMakeSelect = makeSelect;
   makeSelect = function (id, label, key) {
     if (key !== 'lorong') return originalMakeSelect(id, label, key);
@@ -163,46 +101,33 @@
     </select>`;
   };
 
-  // Tampilkan dusun baru yang belum memiliki penduduk pada rekap dusun.
+  // Rekap dusun dibentuk hanya dari warga pada sheet DATAPENDUDUK aktif.
   renderDusunReport = function () {
-    const statsByDusun = {};
-    allDusunNames().forEach(name => {
-      statsByDusun[name] = { rows: [], l: 0, p: 0, kk: 0 };
-    });
-
-    const canonicalNames = new Map(Object.keys(statsByDusun).map(name => [normalizeDusunValue(name), name]));
+    const statsByDusun = new Map();
     rows.forEach(row => {
+      if (!isResidentRecord(row)) return;
       const rawName = clean(val(row, 'lorong'));
-      if (!rawName) return;
-      const name = canonicalNames.get(normalizeDusunValue(rawName)) || rawName;
-      if (!statsByDusun[name]) statsByDusun[name] = { rows: [], l: 0, p: 0, kk: 0 };
-      canonicalNames.set(normalizeDusunValue(rawName), name);
-      const item = statsByDusun[name];
+      if (!rawName || /^\d+$/.test(rawName)) return;
+      const normalized = normalizeDusunValue(rawName);
+      if (!statsByDusun.has(normalized)) statsByDusun.set(normalized, { name: rawName, rows: [], l: 0, p: 0, kk: 0 });
+      const item = statsByDusun.get(normalized);
       item.rows.push(row);
       if (norm(val(row, 'jk')) === 'L') item.l++;
       if (norm(val(row, 'jk')) === 'P') item.p++;
       if (isHead(row)) item.kk++;
     });
-
-    const names = Object.keys(statsByDusun).sort((a, b) => a.localeCompare(b, 'id'));
-    $('dusun').innerHTML =
-      '<thead><tr><th>DUSUN/LORONG</th><th>L</th><th>P</th><th>TOTAL</th><th>KK</th><th>AKSI</th></tr></thead><tbody>' +
-      names.map(name => {
-        const item = statsByDusun[name];
-        return `<tr><td><b>${esc(name)}</b></td><td>${item.l}</td><td>${item.p}</td><td><b>${item.rows.length}</b></td><td>${item.kk}</td><td>${reportButton(name)}</td></tr>`;
-      }).join('') + '</tbody>';
-
+    const entries = Array.from(statsByDusun.values()).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+    $('dusun').innerHTML = '<thead><tr><th>DUSUN/LORONG</th><th>L</th><th>P</th><th>TOTAL</th><th>KK</th><th>AKSI</th></tr></thead><tbody>' +
+      (entries.length ? entries.map(item => `<tr><td><b>${esc(item.name)}</b></td><td>${item.l}</td><td>${item.p}</td><td><b>${item.rows.length}</b></td><td>${item.kk}</td><td>${reportButton(item.name)}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Belum ada data dusun pada sheet DATAPENDUDUK.</td></tr>') + '</tbody>';
     document.querySelectorAll('#dusun .viewBtn').forEach(button => {
       const name = button.dataset.report;
-      if (statsByDusun[name]) {
-        button.onclick = () => applyReportFilter(`Dusun/Lorong: ${name}`, row => sameDusun(val(row, 'lorong'), name));
-      }
+      button.onclick = () => applyReportFilter(`Dusun/Lorong: ${name}`, row => sameDusun(val(row, 'lorong'), name));
     });
   };
 
   function headsForDusun(name) {
     return rows
-      .filter(row => isHead(row) && sameDusun(val(row, 'lorong'), name))
+      .filter(row => isResidentRecord(row) && isHead(row) && sameDusun(val(row, 'lorong'), name))
       .sort((a, b) => clean(val(a, 'nama')).localeCompare(clean(val(b, 'nama')), 'id'));
   }
 
@@ -264,25 +189,29 @@
   }
 
   renderKKReport = function () {
-    const names = allDusunNames();
-    $('kkTotal').textContent = `${names.reduce((total, name) => total + headsForDusun(name).length, 0).toLocaleString('id-ID')} kepala keluarga`;
-    $('kkReport').innerHTML = names.map(name => {
-      const count = headsForDusun(name).length;
-      const safeName = esc(name).replaceAll('"', '&quot;');
-      const list = headsForDusun(name);
-      const table = list.length
-        ? list.map((row, index) => `<tr><td>${index + 1}</td><td>${esc(val(row, 'nama'))}</td><td>${esc(val(row, 'jk'))}</td><td>${esc(val(row, 'pekerjaan'))}</td><td class="signature">&nbsp;</td></tr>`).join('')
-        : '<tr><td colspan="5" class="empty">Belum ada kepala keluarga pada dusun ini.</td></tr>';
-      return `<div class="kkGroup">
-        <div class="kkTitle"><h3>${esc(name)} <small>(${count.toLocaleString('id-ID')} KK)</small></h3><button class="excelBtn" data-export-dusun="${safeName}" type="button">📊 Excel</button></div>
-        <div class="table"><table><thead><tr><th>NO</th><th>NAMA</th><th>JENIS KELAMIN</th><th>PEKERJAAN</th><th>TANDA TANGAN</th></tr></thead><tbody>${table}</tbody></table></div>
-      </div>`;
-    }).join('') || '<div class="empty">Belum ada dusun. Tambahkan nama dusun atau muat data Excel.</div>';
-
+    const groups = new Map();
+    rows.forEach(row => {
+      if (!isHead(row)) return;
+      const name = clean(val(row, 'lorong'));
+      if (!name || /^\d+$/.test(name)) return;
+      const normalized = normalizeDusunValue(name);
+      if (!groups.has(normalized)) groups.set(normalized, { name, rows: [] });
+      groups.get(normalized).rows.push(row);
+    });
+    const entries = Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+    const total = entries.reduce((sum, item) => sum + item.rows.length, 0);
+    $('kkTotal').textContent = `${total.toLocaleString('id-ID')} kepala keluarga · ${entries.length.toLocaleString('id-ID')} dusun`;
+    $('kkReport').innerHTML = entries.map(item => {
+      const list = item.rows.sort((a, b) => clean(val(a, 'nama')).localeCompare(clean(val(b, 'nama')), 'id'));
+      const safeName = esc(item.name).replaceAll('"', '&quot;');
+      const table = list.map((row, index) => `<tr><td>${index + 1}</td><td>${esc(val(row, 'nama'))}</td><td>${esc(val(row, 'jk'))}</td><td>${esc(val(row, 'pekerjaan'))}</td><td class="signature">&nbsp;</td></tr>`).join('');
+      return `<div class="kkGroup"><div class="kkTitle"><h3>${esc(item.name)} <small>(${list.length.toLocaleString('id-ID')} KK)</small></h3><button class="excelBtn" data-export-dusun="${safeName}" type="button">📊 Excel</button></div><div class="table"><table><thead><tr><th>NO</th><th>NAMA</th><th>JENIS KELAMIN</th><th>PEKERJAAN</th><th>TANDA TANGAN</th></tr></thead><tbody>${table}</tbody></table></div></div>`;
+    }).join('') || '<div class="empty">Belum ada kepala keluarga yang terdata pada dusun di sheet DATAPENDUDUK.</div>';
     document.querySelectorAll('#kkReport .excelBtn').forEach(button => {
       button.onclick = () => exportDusun(button.dataset.exportDusun);
     });
   };
+
 
   function exportAllDusun() {
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -298,7 +227,7 @@
     rawSheet['!cols'] = Object.keys(rows[0] || {}).map(() => ({ wch: 20 }));
     appendUniqueSheet(workbook, 'DATAPENDUDUK', rawSheet);
 
-    // Master dusun memungkinkan daftar nama dusun dibawa ke perangkat/browser lain.
+    // Master dusun hanya berisi dusun yang ditemukan pada baris penduduk aktif.
     const masterSheet = XLSX.utils.aoa_to_sheet([['DUSUN'], ...names.map(name => [name])]);
     masterSheet['!cols'] = [{ wch: 32 }];
     appendUniqueSheet(workbook, 'MASTER_DUSUN', masterSheet);
@@ -322,30 +251,10 @@
     combinedSheet['!cols'] = [{ wch: 7 }, { wch: 28 }, { wch: 32 }, { wch: 18 }, { wch: 30 }, { wch: 32 }];
     appendUniqueSheet(workbook, 'SEMUA DUSUN', combinedSheet);
 
-    // Tiap dusun menjadi satu sheet tersendiri, termasuk dusun baru yang masih kosong.
+    // Tiap dusun yang memiliki data menjadi satu sheet tersendiri.
     names.forEach(name => appendUniqueSheet(workbook, name, makeDusunSheet(name)));
 
     XLSX.writeFile(workbook, 'Data-Gampong-Ekspor-Semua-Dusun.xlsx');
-  }
-
-  function addDusun() {
-    const input = prompt('Masukkan nama dusun/lorong baru:');
-    if (input === null) return;
-    const name = input.trim().replace(/\s+/g, ' ');
-    if (!name) {
-      alert('Nama dusun tidak boleh kosong.');
-      return;
-    }
-    const existing = allDusunNames();
-    if (existing.some(item => item.toLocaleUpperCase('id-ID') === name.toLocaleUpperCase('id-ID'))) {
-      alert('Nama dusun tersebut sudah ada.');
-      return;
-    }
-    saveDusun([...readSavedDusun(), name]);
-    buildFilters();
-    renderDusunReport();
-    renderKKReport();
-    alert(`Dusun "${name}" ditambahkan untuk penggunaan sementara di browser ini. Agar menjadi bagian dari sumber data, tambahkan namanya pada kolom DUSUN/LORONG/NAMA DUSUN di Excel, atau masukkan dalam sheet tersendiri dengan judul kolom DUSUN, lalu unggah ulang file.`);
   }
 
   function addControlPanel() {
@@ -358,7 +267,7 @@
       <div class="kkExtraButtons">
         <button type="button" id="exportAllDusun" class="excelBtn">📥 Export Semua Dusun</button>
       </div>
-      <p class="kkExtraHelp">Nama dusun dibaca otomatis dari Excel. Untuk dusun yang sudah memiliki warga, isi kolom DUSUN/LORONG/NAMA DUSUN/NAMA LORONG pada data penduduk. Untuk dusun yang belum memiliki warga, buat sheet Excel khusus dengan judul kolom DUSUN dan tuliskan satu nama dusun per baris, lalu unggah ulang file. Ekspor menghasilkan rekap, daftar gabungan, dan satu sheet untuk setiap dusun.</p>
+      <p class="kkExtraHelp">Daftar ini hanya menampilkan dusun yang memiliki kepala keluarga pada sheet DATAPENDUDUK. Nama dusun dibaca dari kolom LORONG/DUSUN/NAMA LORONG/NAMA DUSUN. Untuk menambahkan dusun, isi nama dusun pada baris penduduk di Excel, lalu muat ulang file. Ekspor menghasilkan rekap, daftar gabungan, dan satu sheet per dusun yang memiliki data.</p>
     `;
     report.parentElement.insertBefore(wrapper, report);
     document.getElementById('exportAllDusun').addEventListener('click', exportAllDusun);
@@ -422,6 +331,91 @@
     activate(saved, false);
   }
 
+
+  function setupRecapTabs() {
+    const tabs = Array.from(document.querySelectorAll('[data-recap-tab]'));
+    const panels = Array.from(document.querySelectorAll('[data-recap-view]'));
+    if (!tabs.length || !panels.length) return;
+    function activate(name) {
+      tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.recapTab === name)));
+      panels.forEach(panel => { panel.hidden = panel.dataset.recapView !== name; });
+      try { localStorage.setItem('datagampong.activeRecapTab.v1', name); } catch (_) {}
+    }
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activate(tab.dataset.recapTab));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let next = index;
+        if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = tabs.length - 1;
+        tabs[next].focus(); activate(tabs[next].dataset.recapTab);
+      });
+    });
+    let saved = 'dusun';
+    try { saved = localStorage.getItem('datagampong.activeRecapTab.v1') || 'dusun'; } catch (_) {}
+    activate(panels.some(panel => panel.dataset.recapView === saved) ? saved : 'dusun');
+  }
+
+  function updateOverview() {
+    const bars = document.getElementById('dgOverviewDusunBars');
+    const complete = document.getElementById('dgOverviewCompleteness');
+    if (!bars || !complete) return;
+    const hasData = Array.isArray(rows) && rows.length > 0;
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = String(value); };
+    if (!hasData) {
+      setText('dgOverviewDusunCount', '—'); setText('dgOverviewEducationCount', '—'); setText('dgOverviewHeadCount', '—');
+      bars.innerHTML = '<div class="dg-empty-state">Pilih file Excel untuk melihat jumlah penduduk per dusun.</div>';
+      complete.innerHTML = '<div class="dg-empty-state">Ringkasan kelengkapan akan muncul setelah data dimuat.</div>';
+      return;
+    }
+    const dusunCounts = new Map();
+    let educated = 0, heads = 0;
+    let nik = 0, noKK = 0, jk = 0, lorong = 0, pekerjaan = 0;
+    rows.forEach(row => {
+      if (!isResidentRecord(row)) return;
+      const name = clean(val(row, 'lorong'));
+      if (name && !/^\d+$/.test(name)) {
+        const normalized = normalizeDusunValue(name);
+        const existing = dusunCounts.get(normalized);
+        if (existing) existing.count++;
+        else dusunCounts.set(normalized, { name, count: 1 });
+        lorong++;
+      }
+      if (clean(val(row, 'pendidikan'))) educated++;
+      if (isHead(row)) heads++;
+      if (identityNormalizeNik(val(row, 'nik')).length === 16) nik++;
+      if (clean(val(row, 'no_kk'))) noKK++;
+      if (clean(val(row, 'jk'))) jk++;
+      if (clean(val(row, 'pekerjaan'))) pekerjaan++;
+    });
+    const entries = Array.from(dusunCounts.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'id'));
+    setText('dgOverviewDusunCount', entries.length.toLocaleString('id-ID'));
+    setText('dgOverviewEducationCount', educated.toLocaleString('id-ID'));
+    setText('dgOverviewHeadCount', heads.toLocaleString('id-ID'));
+    const max = entries.length ? entries[0].count : 0;
+    bars.innerHTML = entries.length ? entries.slice(0, 5).map(item => {
+      const width = max ? Math.max(4, item.count / max * 100) : 0;
+      return `<div class="dg-bar-row"><span class="dg-bar-name" title="${identityEscape(item.name)}">${identityEscape(item.name)}</span><div class="dg-bar-track"><div class="dg-bar-fill" style="width:${width}%"></div></div><strong class="dg-bar-value">${item.count.toLocaleString('id-ID')}</strong></div>`;
+    }).join('') : '<div class="dg-empty-state">Belum ada nama dusun dalam kolom DUSUN/LORONG.</div>';
+    const completenessItems = [
+      ['NIK 16 digit', nik], ['Nomor KK', noKK], ['Jenis kelamin', jk], ['Dusun/Lorong', lorong], ['Pekerjaan', pekerjaan], ['Pendidikan', educated]
+    ];
+    complete.innerHTML = completenessItems.map(([label, count]) => {
+      const pct = Math.round(count / rows.length * 100);
+      return `<div class="dg-completeness-row"><span>${label}</span><strong>${count.toLocaleString('id-ID')} / ${rows.length.toLocaleString('id-ID')} (${pct}%)</strong><div class="dg-completeness-track"><i style="width:${pct}%"></i></div></div>`;
+    }).join('');
+  }
+
+  function setupQuickActions() {
+    document.querySelectorAll('[data-go-tab]').forEach(button => button.addEventListener('click', () => {
+      const tab = document.querySelector(`[data-tab="${button.dataset.goTab}"]`);
+      if (tab) tab.click();
+    }));
+  }
+
   // ---------------------------------------------------------------------------
   // NIK lookup and KTP-inspired local preview. No photograph and not an official ID.
   // The form requires every field before a preview can be rendered.
@@ -437,7 +431,7 @@
     { key: 'jk', label: 'Jenis Kelamin', aliases: ['jk'], type: 'select', options: ['LAKI-LAKI', 'PEREMPUAN'] },
     { key: 'gdr', label: 'Golongan Darah', aliases: ['gdr', 'golongan_darah'] },
     { key: 'alamat', label: 'Alamat', aliases: ['alamat', 'alamat_lengkap'] },
-    { key: 'rt_rw', label: 'RT/RW', aliases: ['rt_rw', 'rtrw'] },
+    { key: 'rt_rw', label: 'RT/RW', aliases: ['rt_rw', 'rtrw'], defaultValue: '-/-', readonly: true },
     { key: 'kel_desa', label: 'Kel/Desa atau Gampong', aliases: ['kel_desa', 'kelurahan', 'desa', 'gampong'] },
     { key: 'kecamatan', label: 'Kecamatan', aliases: ['kecamatan'] },
     { key: 'kabupaten_kota', label: 'Kabupaten/Kota', aliases: ['kabupaten_kota', 'kabupaten', 'kota', 'kab_kota'] },
@@ -528,6 +522,7 @@
     fields.innerHTML = identityFieldDefs.map(def => {
       let value = saved[def.key] || identityReadRow(row, def.aliases);
       if (def.key === 'nik') value = nik;
+      if (def.key === 'rt_rw') value = '-/-';
       if (def.key === 'jk') value = identityNormalizeGender(value);
       if (def.key === 'tgl_lhr') value = identityFormatDate(value);
       if (!value && def.defaultValue) value = def.defaultValue;
@@ -636,7 +631,7 @@
       identityCardRow('Tempat/Tgl Lahir', `${data.tmpt_lhr} / ${data.tgl_lhr}`),
       `<div class="dg-id-grid">${identityCardRow('Jenis Kelamin', data.jk)}${identityCardRow('Gol. Darah', data.gdr)}</div>`,
       identityCardRow('Alamat', data.alamat),
-      `<div class="dg-id-grid">${identityCardRow('RT/RW', data.rt_rw)}${identityCardRow('Kel/Desa', data.kel_desa)}</div>`,
+      `<div class="dg-id-grid">${identityCardRow('RT/RW', '-/-')}${identityCardRow('Kel/Desa', data.kel_desa)}</div>`,
       `<div class="dg-id-grid">${identityCardRow('Kecamatan', data.kecamatan)}${identityCardRow('Agama', data.agama)}</div>`,
       `<div class="dg-id-grid">${identityCardRow('Status Perkawinan', data.status_perkawinan)}${identityCardRow('Pekerjaan', data.pekerjaan)}</div>`,
       `<div class="dg-id-grid">${identityCardRow('Kewarganegaraan', data.kewarganegaraan)}${identityCardRow('Berlaku Hingga', data.berlaku_hingga)}</div>`
@@ -708,5 +703,13 @@
   }
 
   setupFeatureTabs();
+  setupRecapTabs();
+  setupQuickActions();
   setupIdentityFeature();
+  const originalRender = render;
+  render = function () {
+    originalRender();
+    updateOverview();
+  };
+  updateOverview();
 })();
