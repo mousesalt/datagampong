@@ -1,7 +1,7 @@
 /*
  * Data Gampong - Fitur tambahan
- * - Ekspor semua dusun dalam satu workbook Excel
- * - Setiap dusun mempunyai sheet sendiri
+ * - Ekspor daftar kepala keluarga per dusun dan ekspor gabungan semua dusun
+ * - Nama file ekspor otomatis diberi tanggal hari ini
  * - Membaca nama dusun otomatis dari kolom Excel DUSUN/LORONG/NAMA DUSUN
  * - Menyertakan MASTER_DUSUN agar daftar dusun kosong ikut saat workbook dipindah perangkat
  *
@@ -165,6 +165,14 @@
     return String(value).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'Dusun';
   }
 
+  function exportDateStamp(date = new Date()) {
+    // Local date to avoid UTC making the filename one day off in Indonesia.
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+
   function safeSheetName(value, workbook) {
     const base = String(value || 'Dusun').replace(/[\\/?:*\[\]]/g, ' ').trim().slice(0, 31) || 'Dusun';
     const used = new Set(workbook.SheetNames.map(name => name.toLocaleLowerCase('id-ID')));
@@ -185,7 +193,7 @@
   function exportDusun(name) {
     const workbook = XLSX.utils.book_new();
     appendUniqueSheet(workbook, name, makeDusunSheet(name));
-    XLSX.writeFile(workbook, `Daftar-Kepala-Keluarga-${safeFilePart(name)}.xlsx`);
+    XLSX.writeFile(workbook, `Daftar-Kepala-Keluarga-${safeFilePart(name)}-${exportDateStamp()}.xlsx`);
   }
 
   renderKKReport = function () {
@@ -229,7 +237,7 @@
 
     const workbook = XLSX.utils.book_new();
     names.forEach(name => appendUniqueSheet(workbook, name, makeDusunSheet(name)));
-    XLSX.writeFile(workbook, 'Daftar-Kepala-Keluarga-Semua-Dusun.xlsx');
+    XLSX.writeFile(workbook, `Daftar-Kepala-Keluarga-Semua-Dusun-${exportDateStamp()}.xlsx`);
   }
 
   function addControlPanel() {
@@ -601,42 +609,53 @@
   }
 
   function identityCardRow(label, value, extraClass = '') {
-    return `<div class="dg-id-row ${extraClass}"><span class="key">${identityEscape(label)}</span><span>:</span><span class="value">${identityEscape(value)}</span></div>`;
+    return `<div class="dg-id-row ${extraClass}"><span class="key">${identityEscape(label)}</span><span class="value">${identityEscape(value)}</span></div>`;
   }
 
   function identityRenderCard(data) {
-    const top = `
-      <div class="dg-identity-top">
-        <div class="province">PROVINSI ${identityEscape(data.provinsi)}</div>
-        <div class="city">${identityEscape(data.kabupaten_kota)}</div>
-        <div class="dg-id-banner">PRATINJAU DATA PENDUDUK • BUKAN DOKUMEN RESMI</div>
-      </div>`;
     const leftBody = [
       identityCardRow('NIK', data.nik, 'dg-id-nik'),
-      identityCardRow('Nama', data.nama),
-      identityCardRow('Tempat/Tgl Lahir', `${data.tmpt_lhr} / ${data.tgl_lhr}`),
-      `<div class="dg-id-grid">${identityCardRow('Jenis Kelamin', data.jk)}${identityCardRow('Gol. Darah', data.gdr)}</div>`,
-      identityCardRow('Alamat', data.alamat)
+      identityCardRow('Nama Lengkap', data.nama, 'dg-id-name'),
+      identityCardRow('Tempat / Tanggal Lahir', `${data.tmpt_lhr} / ${data.tgl_lhr}`),
+      `<div class="dg-id-grid dg-id-grid-compact">${identityCardRow('Jenis Kelamin', data.jk)}${identityCardRow('Golongan Darah', data.gdr || '-')}</div>`,
+      identityCardRow('Alamat', data.alamat, 'dg-id-address')
     ].join('');
     const rightBody = [
-      `<div class="dg-id-grid">${identityCardRow('RT/RW', '-/-')}${identityCardRow('Kel/Desa', data.kel_desa)}</div>`,
-      `<div class="dg-id-grid">${identityCardRow('Kecamatan', data.kecamatan)}${identityCardRow('Agama', data.agama)}</div>`,
-      `<div class="dg-id-grid">${identityCardRow('Status', data.status_perkawinan)}${identityCardRow('Pekerjaan', data.pekerjaan)}</div>`,
-      `<div class="dg-id-grid">${identityCardRow('Warga Negara', data.kewarganegaraan)}${identityCardRow('Berlaku Hingga', data.berlaku_hingga)}</div>`
+      identityCardRow('RT/RW', '-/-'),
+      identityCardRow('Gampong / Desa', data.kel_desa),
+      identityCardRow('Kecamatan', data.kecamatan),
+      identityCardRow('Kabupaten / Kota', data.kabupaten_kota),
+      identityCardRow('Provinsi', data.provinsi),
+      identityCardRow('Agama', data.agama),
+      identityCardRow('Status Perkawinan', data.status_perkawinan),
+      identityCardRow('Pekerjaan', data.pekerjaan),
+      identityCardRow('Kewarganegaraan', data.kewarganegaraan),
+      identityCardRow('Berlaku Hingga', data.berlaku_hingga)
     ].join('');
-    const body = `<div class="dg-id-column dg-id-column-left">${leftBody}</div><div class="dg-id-column dg-id-column-right">${rightBody}</div>`;
+
     const card = `
-      <div class="dg-identity-card" aria-label="Pratinjau kartu identitas penduduk tanpa foto">
-        <div class="dg-id-watermark">PRATINJAU • BUKAN DOKUMEN RESMI</div>
-        ${top}<div class="dg-identity-main">${body}</div>
-        <div class="dg-identity-footer"><span>Data lokal gampong</span><span>Pratinjau internal — tidak berlaku sebagai identitas resmi</span></div>
-      </div>
-      <div class="dg-identity-actions"><button type="button" id="dgIdentityPrint">🖨 Cetak Pratinjau</button></div>`;
+      <article class="dg-identity-card" aria-label="Pratinjau kartu data penduduk, bukan dokumen resmi">
+        <header class="dg-identity-top">
+          <div class="dg-id-brand">
+            <span class="dg-id-mark" aria-hidden="true">DG</span>
+            <span class="dg-id-brand-copy"><strong>DATA GAMPONG</strong><small>Kartu Data Penduduk</small></span>
+          </div>
+          <div class="dg-id-status"><span class="dg-id-status-dot"></span> PRATINJAU INTERNAL<br><strong>BUKAN DOKUMEN RESMI</strong></div>
+        </header>
+        <div class="dg-identity-main">
+          <section class="dg-id-column dg-id-column-left" aria-label="Identitas utama">${leftBody}</section>
+          <section class="dg-id-column dg-id-column-right" aria-label="Informasi penduduk"><div class="dg-id-grid">${rightBody}</div></section>
+        </div>
+        <footer class="dg-identity-footer"><span>Data lokal gampong</span><span>Hanya untuk pratinjau administrasi internal</span></footer>
+      </article>
+      <div class="dg-identity-actions"><button type="button" id="dgIdentityPrint">🖨 Cetak pada kertas A4</button></div>`;
     document.getElementById('dgIdentityCardResult').innerHTML = card;
     document.getElementById('dgIdentityPrint').addEventListener('click', () => {
       document.body.classList.add('dg-print-identity');
+      const cleanup = () => document.body.classList.remove('dg-print-identity');
+      window.addEventListener('afterprint', cleanup, { once: true });
       window.print();
-      window.setTimeout(() => document.body.classList.remove('dg-print-identity'), 1200);
+      window.setTimeout(cleanup, 2000);
     });
   }
 
